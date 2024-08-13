@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QListWidget,
     QListWidgetItem,
 )
+from PyQt5.QtCore import QThread, pyqtSignal
 from commands import (
     conda_create,
     conda_env_list,
@@ -15,6 +16,7 @@ from commands import (
     run_in_conda_env,
     conda_env_exists,
 )
+import time
 
 # not actually useful?
 # from conda.cli import main_env_create, main_env_config, install
@@ -22,6 +24,25 @@ from commands import (
 
 home_dir = os.path.expanduser("~")
 conda_shell = os.path.join(home_dir, "miniconda3/etc/profile.d/conda.sh")
+
+
+class InstallerThread(QThread):
+    update_status = pyqtSignal(str)
+    result_ready = pyqtSignal(str)
+
+    def __init__(self, conda_shell, env_name, from_environment, parent=None):
+        super().__init__(parent)
+        self.conda_shell = conda_shell
+        self.env_name = env_name
+        self.from_environment = from_environment
+
+    def run(self):
+        # Simulate a long-running task
+        result = conda_create(
+            self.conda_shell, self.env_name, self.from_environment
+        )
+        self.update_status.emit("Installation complete")
+        self.result_ready.emit(result.stdout)
 
 
 class CondaGUI(QMainWindow):
@@ -77,21 +98,41 @@ class CondaGUI(QMainWindow):
             env_name = selected_item_name.text().split("\t")[0]
         print(f"Creating {env_name} environment")
         print("Working on it...")
+
+
+        self.list_widget.update()
+
         from_environment = False
 
         if "Cellpose" in env_name:
             from_environment = True
-
-        result = conda_create(conda_shell, env_name, from_environment)
+        
+        self.thread = InstallerThread(conda_shell, env_name, from_environment, self)
+        self.thread.update_status.connect(self.update_status)  # Connect the status signal
+        self.thread.result_ready.connect(self.handle_result)  # Connect the result signal
+        self.thread.start()
 
         if "Cellpose" in env_name:
             print("Installing GUI")
             result = run_in_conda_env(
                 conda_shell, env_name, "pip install cellpose[gui]"
             )
+
         print(f"{env_name} environment created!")
         if conda_env_exists(conda_shell, env_name):
             selected_item_name.setText(env_name + "\t[Installed]")
+
+    def update_status(self, selected_item_name):
+        selected_item_name.setText(
+            selected_item_name.text() + "\tinstalling..."
+        )
+        # self.list_item.setText(status)  # Slot that updates the QListWidget item
+
+    def handle_result(self, result):
+        # Handle the result of the operation
+        print(f"Result: {result}")
+        # You can update the UI or perform other actions based on the result
+
 
     def list_environments(self):
         conda_env_list(conda_shell)
