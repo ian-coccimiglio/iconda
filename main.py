@@ -13,6 +13,7 @@ from commands import (
     conda_env_list,
     conda_remove,
     run_in_conda_env,
+    conda_env_exists,
 )
 
 # not actually useful?
@@ -32,10 +33,13 @@ class CondaGUI(QMainWindow):
         layout = QVBoxLayout()
 
         self.list_widget = QListWidget()
-        QListWidgetItem("Cellpose", self.list_widget)
-        QListWidgetItem("Napari", self.list_widget)
-        QListWidgetItem("Jupyter", self.list_widget)
-        # QListWidgetItem("Spyder", self.list_widget)
+        curated_envs = ["cellpose_test", "Napari_test", "Jupyter_test"]
+        for env in curated_envs:
+            if conda_env_exists(conda_shell, env):
+                env += "\t[Installed]"
+            else:
+                env += "\t[Uninstalled]"
+            QListWidgetItem(env, self.list_widget)
         layout.addWidget(self.list_widget)
         self.list_widget.itemSelectionChanged.connect(self.on_change)
 
@@ -56,13 +60,21 @@ class CondaGUI(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def on_change(self):
-        print(f"Selected {self.list_widget.selectedItems()[0].text()}")
-        # print([item.text() for item in self.list_widget.selectedItems()])
+        selected_item = self.list_widget.selectedItems()[0]
+
+    #        print(f"Selected {selected_item.text()}")
+    #        selected_item.setText(selected_item.text() + "\t[selected]")
+
+    # print([item.text() for item in self.list_widget.selectedItems()])
 
     def create_environment(self):
         # Add logic to get environment name from user
-        selected_item_name = self.list_widget.selectedItems()[0].text()
-        env_name = selected_item_name + "_test"
+        selected_item_name = self.list_widget.selectedItems()[0]
+        if "[Installed]" in selected_item_name.text():
+            print("Environment is already installed!")
+            return None
+        else:
+            env_name = selected_item_name.text().split("\t")[0]
         print(f"Creating {env_name} environment")
         print("Working on it...")
         from_environment = False
@@ -78,16 +90,23 @@ class CondaGUI(QMainWindow):
                 conda_shell, env_name, "pip install cellpose[gui]"
             )
         print(f"{env_name} environment created!")
+        if conda_env_exists(conda_shell, env_name):
+            selected_item_name.setText(env_name + "\t[Installed]")
 
     def list_environments(self):
         conda_env_list(conda_shell)
 
     def remove_environment(self):
-        selected_item_name = self.list_widget.selectedItems()[0].text()
-        env_name = selected_item_name + "_test"
+        selected_item_name = self.list_widget.selectedItems()[0]
+        env_name = selected_item_name.text().split("\t")[0]
         print(f"Removing {env_name} environment")
         result = conda_remove(conda_shell, env_name)
         print(f"{env_name} removed")
+        if conda_env_exists(conda_shell, env_name):
+            print("Environment wasn't removed")
+        else:
+            selected_item_name.setText(env_name + "\t[Uninstalled]")
+
         if result.returncode != 0:
             print("something weird happened")
 

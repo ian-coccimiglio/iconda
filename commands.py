@@ -25,6 +25,35 @@ def get_conda_shell():
         raise NotImplementedError(f"Unsupported OS: {system}")
 
 
+def conda_env_exists(conda_shell, env_name):
+    """
+    Checks if a conda environment exists.
+    """
+    system = platform.system()
+    if system == "Windows":
+        full_command = f"call {conda_shell} && conda env list"
+        result = subprocess.run(
+            ["cmd.exe", "/c", full_command],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+    else:
+        full_command = f"source {conda_shell} && conda env list"
+        result = subprocess.run(
+            ["bash", "-c", full_command],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+    envs = result.stdout.splitlines()
+    for env in envs:
+        if env_name in env:
+            return True
+    return False
+
+
 def conda_create(conda_shell, env_name, from_environment=False):
     """
     Creates a conda environment, assuming conda is available
