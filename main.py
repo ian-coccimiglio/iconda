@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
     QListWidget,
     QListWidgetItem,
 )
-import subprocess
 from commands import (
     conda_create,
     conda_env_list,
@@ -36,7 +35,7 @@ class CondaGUI(QMainWindow):
         QListWidgetItem("Cellpose", self.list_widget)
         QListWidgetItem("Napari", self.list_widget)
         QListWidgetItem("Jupyter", self.list_widget)
-        QListWidgetItem("Spyder", self.list_widget)
+        # QListWidgetItem("Spyder", self.list_widget)
         layout.addWidget(self.list_widget)
         self.list_widget.itemSelectionChanged.connect(self.on_change)
 
@@ -66,11 +65,15 @@ class CondaGUI(QMainWindow):
         env_name = selected_item_name + "_test"
         print(f"Creating {env_name} environment")
         print("Working on it...")
-        result = conda_create(conda_shell, env_name)
-        if result.returncode != 0:
-            print("something weird happened")
-        print("Installing GUI")
+        from_environment = False
+
         if "Cellpose" in env_name:
+            from_environment = True
+
+        result = conda_create(conda_shell, env_name, from_environment)
+
+        if "Cellpose" in env_name:
+            print("Installing GUI")
             result = run_in_conda_env(
                 conda_shell, env_name, "pip install cellpose[gui]"
             )

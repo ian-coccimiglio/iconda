@@ -7,12 +7,25 @@ Created on Tue Aug 13 00:55:55 2024
 """
 
 import subprocess
+import platform
 
 # Handling different OS (linux/windows/mac)
 # Handling different users
 
 
-def conda_create(conda_shell, env_name):
+def get_conda_shell():
+    system = platform.system()
+    if system == "Windows":
+        home_dir = os.path.expanduser("~")
+        return os.path.join(home_dir, "Miniconda3", "Scripts", "activate.bat")
+    elif system == "Linux" or system == "Darwin":
+        home_dir = os.path.expanduser("~")
+        return os.path.join(home_dir, "miniconda3/etc/profile.d/conda.sh")
+    else:
+        raise NotImplementedError(f"Unsupported OS: {system}")
+
+
+def conda_create(conda_shell, env_name, from_environment=False):
     """
     Creates a conda environment, assuming conda is available
     """
@@ -23,18 +36,25 @@ def conda_create(conda_shell, env_name):
     else:
         packages = ""
 
-    if "Cellpose" in env_name:
-        command = "env create -f cellpose_environment.yml -y"
-        full_command = f"source {conda_shell} && conda {command}"
-    else:
+    if from_environment == False:
         command = f"create -n {env_name} {packages} -y"
-        full_command = f"source {conda_shell} && conda {command}"
+    else:
+        environment = get_environment(env_name)
+        command = f"env create -f {environment} -y"
+    full_command = f"source {conda_shell} && conda {command}"
 
     result = subprocess.run(
         ["bash", "-c", full_command], text=True, capture_output=True
     )
 
     return result
+
+
+def get_environment(env_name):
+    environment = None
+    if env_name == "Cellpose":
+        environment = "cellpose_environment.yml"
+    return environment
 
 
 def run_in_conda_env(conda_shell, env_name, command):
@@ -77,7 +97,7 @@ if __name__ == "__main__":
     import os
 
     home_dir = os.path.expanduser("~")
-    conda_shell = os.path.join(home_dir, "miniconda3/etc/profile.d/conda.sh")
+    conda_shell = get_conda_shell()
     print("Creating an environment...")
     conda_create(conda_shell, "cellpose_test")
     print("Environment created")
