@@ -1,6 +1,6 @@
 name: Cellpose_test
 dependencies:
-  - python==3.8.5
+  - python==3.9
   - pip
   - pip:
     - qtpy

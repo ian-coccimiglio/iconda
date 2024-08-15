@@ -29,6 +29,7 @@ class CondaGUI(QMainWindow):
         super().__init__()
         self.setWindowTitle("Conda Environment Manager")
         self.setGeometry(2200, 600, 300, 200)
+        self.setAcceptDrops(True)
 
         layout = QVBoxLayout()
 
@@ -50,6 +51,7 @@ class CondaGUI(QMainWindow):
         list_button = QPushButton("List Environments")
         list_button.clicked.connect(self.list_environments)
         layout.addWidget(list_button)
+        
 
         remove_button = QPushButton("Remove Environment")
         remove_button.clicked.connect(self.remove_environment)
@@ -58,6 +60,19 @@ class CondaGUI(QMainWindow):
         central_widget = QWidget()
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
+
+    def dragEnterEvent(self, event):
+         if event.mimeData().hasUrls():
+             event.accept()
+         else:
+             event.ignore()
+    
+    def dropEvent(self, event):
+         files = [u.toLocalFile() for u in event.mimeData().urls()]
+         for file in files:
+             QListWidgetItem(file, )
+             self.list_widget.addItem
+         
 
     def on_change(self):
         selected_item = self.list_widget.selectedItems()[0]
@@ -69,6 +84,9 @@ class CondaGUI(QMainWindow):
 
     def create_environment(self):
         # Add logic to get environment name from user
+        if not self.list_widget.selectedItems():
+            print("Select an item first")
+            return None
         selected_item_name = self.list_widget.selectedItems()[0]
         if "[Installed]" in selected_item_name.text():
             print("Environment is already installed!")
