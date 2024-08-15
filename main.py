@@ -7,6 +7,9 @@ from PyQt5.QtWidgets import (
     QWidget,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
+    QTableWidget,
+    QTableWidgetItem,
 )
 from commands import (
     conda_create,
@@ -16,10 +19,6 @@ from commands import (
     conda_env_exists,
 )
 
-# not actually useful?
-# from conda.cli import main_env_create, main_env_config, install
-# from conda.testing import conda_cli
-
 home_dir = os.path.expanduser("~")
 conda_shell = os.path.join(home_dir, "miniconda3/etc/profile.d/conda.sh")
 
@@ -27,14 +26,14 @@ conda_shell = os.path.join(home_dir, "miniconda3/etc/profile.d/conda.sh")
 class CondaGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Conda Environment Manager")
+        self.setWindowTitle("iconda!")
         self.setGeometry(2200, 600, 300, 200)
         self.setAcceptDrops(True)
 
         layout = QVBoxLayout()
 
         self.list_widget = QListWidget()
-        curated_envs = ["cellpose_test", "Napari_test", "Jupyter_test"]
+        curated_envs = ["cellpose_test", "napari_test", "jupyter_test"]
         for env in curated_envs:
             if conda_env_exists(conda_shell, env):
                 env += "\t[Installed]"
@@ -51,7 +50,6 @@ class CondaGUI(QMainWindow):
         list_button = QPushButton("List Environments")
         list_button.clicked.connect(self.list_environments)
         layout.addWidget(list_button)
-        
 
         remove_button = QPushButton("Remove Environment")
         remove_button.clicked.connect(self.remove_environment)
@@ -62,68 +60,80 @@ class CondaGUI(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def dragEnterEvent(self, event):
-         if event.mimeData().hasUrls():
-             event.accept()
-         else:
-             event.ignore()
-    
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
     def dropEvent(self, event):
-         files = [u.toLocalFile() for u in event.mimeData().urls()]
-         for file in files:
-             QListWidgetItem(file, )
-             self.list_widget.addItem
-         
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        for file in files:
+            QListWidgetItem(file, self.list_widget)
+
+    def get_selection(self, selected_item):
+        if selected_item:
+            return selected_item[0]
+        else:
+            QMessageBox.warning(self, "Warning", "Pick a selection first!")
+            return None
 
     def on_change(self):
         selected_item = self.list_widget.selectedItems()[0]
+        print(f"Selected {selected_item.text()}")
+        print(len(self.list_widget.selectedItems()))
 
-    #        print(f"Selected {selected_item.text()}")
     #        selected_item.setText(selected_item.text() + "\t[selected]")
 
     # print([item.text() for item in self.list_widget.selectedItems()])
 
     def create_environment(self):
         # Add logic to get environment name from user
-        if not self.list_widget.selectedItems():
-            print("Select an item first")
-            return None
-        selected_item_name = self.list_widget.selectedItems()[0]
-        if "[Installed]" in selected_item_name.text():
-            print("Environment is already installed!")
-            return None
+        selected_item = self.get_selection(self.list_widget.selectedItems())
+        if not selected_item:
+            return
+
+        if "[Installed]" in selected_item.text():
+            QMessageBox.warning(
+                self, "Warning", "Environment is already installed!"
+            )
+            return
         else:
-            env_name = selected_item_name.text().split("\t")[0]
+            env_name = selected_item.text().split("\t")[0]
+
         print(f"Creating {env_name} environment")
         print("Working on it...")
         from_environment = False
 
-        if "Cellpose" in env_name:
+        if "cellpose" in env_name:
             from_environment = True
 
         result = conda_create(conda_shell, env_name, from_environment)
 
-        if "Cellpose" in env_name:
+        if "cellpose" in env_name:
             print("Installing GUI")
             result = run_in_conda_env(
                 conda_shell, env_name, "pip install cellpose[gui]"
             )
         print(f"{env_name} environment created!")
         if conda_env_exists(conda_shell, env_name):
-            selected_item_name.setText(env_name + "\t[Installed]")
+            selected_item.setText(env_name + "\t[Installed]")
 
     def list_environments(self):
-        conda_env_list(conda_shell)
+        envs = conda_env_list(conda_shell)
+        QMessageBox.information(self, "Installed Environments", envs)
 
     def remove_environment(self):
-        selected_item_name = self.list_widget.selectedItems()[0]
-        env_name = selected_item_name.text().split("\t")[0]
+        selected_item = self.get_selection(self.list_widget.selectedItems())
+        if not selected_item:
+            return
+        env_name = selected_item.text().split("\t")[0]
         print(f"Removing {env_name} environment")
         result = conda_remove(conda_shell, env_name)
         print(f"{env_name} removed")
         if conda_env_exists(conda_shell, env_name):
             print("Environment wasn't removed")
         else:
-            selected_item_name.setText(env_name + "\t[Uninstalled]")
+            selected_item.setText(env_name + "\t[Uninstalled]")
 
         if result.returncode != 0:
             print("something weird happened")

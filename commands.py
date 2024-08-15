@@ -58,9 +58,9 @@ def conda_create(conda_shell, env_name, from_environment=False):
     """
     Creates a conda environment, assuming conda is available
     """
-    if "Jupyter" in env_name:
+    if "jupyter" in env_name:
         packages = "-c conda-forge jupyterlab"
-    elif "Napari" in env_name:
+    elif "napari" in env_name:
         packages = "-c conda-forge python=3.10 napari pyqt"
     else:
         packages = ""
@@ -106,8 +106,7 @@ def conda_env_list(conda_shell):
     result = subprocess.run(
         ["bash", "-c", full_command], text=True, capture_output=True
     )
-    print(result.stdout)
-    return None
+    return result.stdout
 
 
 def conda_remove(conda_shell, env_name):

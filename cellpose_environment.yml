@@ -1,4 +1,4 @@
-name: Cellpose_test
+name: cellpose_test
 dependencies:
   - python==3.9
   - pip
